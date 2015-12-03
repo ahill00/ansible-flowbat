@@ -1,0 +1,46 @@
+---
+# tasks file for ansible-flowbat
+- name: install node key
+  shell: curl -sL https://deb.nodesource.com/setup_0.12 | sudo bash
+
+- name: install packages
+  apt: name={{ item }} state=present
+  with_items:
+    - super
+    - build-essential
+    - checkinstall
+    - curl
+    - git-core
+    - mongodb-server
+    - nodejs
+  sudo: yes
+
+- name: grab flowbat
+  git: repo=https://github.com/chrissanders/FlowBAT.git dest=/home/vagrant/flowbat
+       force=yes
+
+- name: install meteor
+  shell: curl https://install.meteor.com | /bin/sh
+
+- name: install flowbat
+  command: npm install chdir=/home/vagrant/flowbat/private/bundle/programs/server
+
+- name: upstart configuration for flowbat
+  template: src=flowbat.j2
+        dest=/etc/init/flowbat.conf
+  sudo: yes
+
+- name: add flowbat meteor config
+  copy: src=dev.json dest=/home/vagrant/flowbat/private/bundle/settings/dev.json
+
+# NOTE(andyhky): node 0.12 isn't fully vetted with meteor packaging, and has issues.
+# http://stackoverflow.com/questions/29340510/bcrypt-is-breaking-my-meteor-application-how-do-i-fix-it
+- name: workaround node/meteor/bcrypt issue
+  command: rm -R /home/vagrant/flowbat/private/bundle/programs/server/npm/npm-bcrypt/node_modules/bcrypt
+
+- name: reinstall bcrypt
+  command: npm install bcrypt chdir=/home/vagrant/flowbat/private/bundle/programs/server
+
+- name: start flowbat
+  service: name=flowbat state=started
+  sudo: yes

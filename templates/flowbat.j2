@@ -1,0 +1,29 @@
+# upstart service file at /etc/init/flowbat.conf
+description "FlowBAT"
+
+# When to start the service
+start on started mongodb and runlevel [2345]
+
+# When to stop the service
+stop on shutdown
+
+# Automatically restart process if crashed
+respawn
+respawn limit 10 5
+
+# drop root proviliges and switch to FlowBAT install user
+setuid {{ ansible_ssh_user }}
+setgid {{ ansible_ssh_user }}
+
+script
+    export PATH=/opt/local/bin:/opt/local/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    export NODE_PATH=/usr/lib/nodejs:/usr/lib/node_modules
+    export PWD=/home/vagrant/flowbat/
+    export HOME=/home/vagrant/flowbat/
+    export PORT=1800
+    export MONGO_URL=mongodb://localhost:27017/flowbat
+    export ROOT_URL=http://127.0.0.1
+    . /home/vagrant/flowbat/settings/meteorsettings.json
+    export METEOR_SETTINGS
+    exec node /home/vagrant/flowbat/private/bundle/main.js >> /home/vagrant/flowbat/flowbat.log
+end script
